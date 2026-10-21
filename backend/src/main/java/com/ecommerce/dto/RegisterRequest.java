@@ -1,0 +1,28 @@
+package com.ecommerce.dto;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+/**
+ * Request payload for registering a new user account.
+ *
+ * @param name     User's display name
+ * @param email    User's unique email address
+ * @param password Raw plaintext password (validated and hashed on server)
+ */
+public record RegisterRequest(
+        @NotBlank(message = "Name is required")
+        @Size(max = 100, message = "Name must not exceed 100 characters")
+        String name,
+
+        @NotBlank(message = "Email is required")
+        @Email(message = "Email must be valid")
+        String email,
+
+        @NotBlank(message = "Password is required")
+        @Size(min = 8, max = 100, message = "Password must be between 8 and 100 characters")
+        String password
+) {
+}
+

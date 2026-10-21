@@ -27,3 +27,9 @@ logging:
     com.ecommerce: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+jwt:
+  # Signing secret for HMAC-SHA256 (HS256). Must be at least 256 bits (32 bytes).
+  secret: ${JWT_SECRET:c2NhbGFibGUtZWNvbW1lcmNlLXN5c3RlbS1zdXBlci1zZWNyZXQta2V5LTIwMjY=}
+  # Token validity duration in milliseconds (default: 15 minutes = 900,000 ms)
+  expiration-ms: ${JWT_EXPIRATION_MS:900000}
