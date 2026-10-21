@@ -7,6 +7,8 @@ spring:
       # MongoDB connection URI with Docker Compose service hostname 'mongodb' by default.
       # For local standalone development outside Docker, set MONGODB_URI=mongodb://localhost:27017/ecommerce_db
       uri: ${MONGODB_URI:mongodb://mongodb:27017/ecommerce_db?serverSelectionTimeoutMS=3000&connectTimeoutMS=3000}
+      # Index creation is managed operationally or enabled via environment variable
+      auto-index-creation: ${AUTO_INDEX_CREATION:false}
     redis:
       # Redis host and port with Docker Compose service hostname 'redis' by default.
       # For local standalone development outside Docker, set REDIS_HOST=localhost

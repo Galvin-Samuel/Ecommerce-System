@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: ecommerce-backend
+
+  data:
+    mongodb:
+      auto-index-creation: false
+
+server:
+  port: 8080
+
+logging:
+  level:
+    root: INFO
+    com.ecommerce: INFO
+
