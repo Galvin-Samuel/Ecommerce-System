@@ -33,3 +33,11 @@ jwt:
   secret: ${JWT_SECRET:c2NhbGFibGUtZWNvbW1lcmNlLXN5c3RlbS1zdXBlci1zZWNyZXQta2V5LTIwMjY=}
   # Token validity duration in milliseconds (default: 15 minutes = 900,000 ms)
   expiration-ms: ${JWT_EXPIRATION_MS:900000}
+
+app:
+  cache:
+    # TTL for individual product detail entries (default: 10 minutes)
+    product-ttl-minutes: ${PRODUCT_CACHE_TTL_MINUTES:10}
+    # TTL for catalog searches and listings (default: 5 minutes)
+    search-ttl-minutes: ${SEARCH_CACHE_TTL_MINUTES:5}
+

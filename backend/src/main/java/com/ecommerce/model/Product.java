@@ -21,7 +21,8 @@ import java.util.Objects;
  */
 @Document(collection = "products")
 @CompoundIndexes({
-        @CompoundIndex(name = "category_price_idx", def = "{'category': 1, 'price': 1}")
+        @CompoundIndex(name = "category_price_idx", def = "{'category': 1, 'price': 1}"),
+        @CompoundIndex(name = "category_name_idx", def = "{'category': 1, 'name': 1}")
 })
 public class Product {
 
