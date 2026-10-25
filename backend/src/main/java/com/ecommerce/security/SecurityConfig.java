@@ -27,15 +27,18 @@ public class SecurityConfig {
     private final JwtAuthenticationEntryPoint authenticationEntryPoint;
     private final CustomAccessDeniedHandler accessDeniedHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final com.ecommerce.ratelimit.RateLimitingFilter rateLimitingFilter;
 
     public SecurityConfig(
             JwtAuthenticationEntryPoint authenticationEntryPoint,
             CustomAccessDeniedHandler accessDeniedHandler,
-            JwtAuthenticationFilter jwtAuthenticationFilter
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            com.ecommerce.ratelimit.RateLimitingFilter rateLimitingFilter
     ) {
         this.authenticationEntryPoint = authenticationEntryPoint;
         this.accessDeniedHandler = accessDeniedHandler;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.rateLimitingFilter = rateLimitingFilter;
     }
 
     @Bean
@@ -46,6 +49,15 @@ public class SecurityConfig {
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
+    }
+
+    @Bean
+    public org.springframework.boot.web.servlet.FilterRegistrationBean<com.ecommerce.ratelimit.RateLimitingFilter> rateLimitingFilterRegistration(
+            com.ecommerce.ratelimit.RateLimitingFilter filter) {
+        org.springframework.boot.web.servlet.FilterRegistrationBean<com.ecommerce.ratelimit.RateLimitingFilter> registration =
+                new org.springframework.boot.web.servlet.FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
     }
 
     @Bean
@@ -63,9 +75,19 @@ public class SecurityConfig {
                         .requestMatchers("/api/health", "/api/health/**").permitAll()
                         .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/products", "/api/v1/products/**").permitAll()
+                        .requestMatchers("/api/v1/kv", "/api/v1/kv/**").permitAll()
+                        .requestMatchers("/api/v1/shards", "/api/v1/shards/**").permitAll()
+                        .requestMatchers("/api/v1/ids", "/api/v1/ids/**").permitAll()
+                        .requestMatchers("/api/v1/short-urls/my").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/short-urls").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/short-urls/**").permitAll()
+                        .requestMatchers("/r/**").permitAll()
+                        .requestMatchers("/api/v1/crawler", "/api/v1/crawler/**").permitAll()
+                        .requestMatchers("/api/v1/competitors", "/api/v1/competitors/**").permitAll()
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(rateLimitingFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

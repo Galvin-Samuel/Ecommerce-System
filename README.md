@@ -4,17 +4,16 @@ A production-grade, highly scalable distributed E-Commerce platform built using 
 
 ---
 
-## Current Status: Phase 5 Completed
+## Current Status: All 20 Phases Completed
 
-* **Phase 1: Project Structure and Backend Initialization** — Completed
-* **Phase 2: Database and Cache Infrastructure Setup** — Completed
-* **Phase 3: Database Design and Common Models** — Completed
-* **Phase 4: API Standards and Postman Setup** — Completed
-* **Phase 5: User Authentication & JWT Service** — Completed
-
-Phase 5 establishes stateless user authentication, Spring Security configuration, BCrypt password hashing, signed HMAC-SHA256 JWT generation and validation, safe user DTOs (`UserResponse`, `AuthResponse`), centralized security exception handlers, automated test suites, and Postman integration.
-
-> **Note on Future Phases**: Product catalog/inventory management, Redis cache-aside caching, shopping cart sessions, order processing, and payment orchestration are scheduled for subsequent phases (Phases 6 through 20).
+* **Phases 1–5**: Infrastructure, Data Models, JWT Security, API Standards — Completed
+* **Phases 6–10**: Catalog, Redis Cache-Aside, Cart, Orders, Snowflake ID Generator — Completed
+* **Phases 11–15**: Distributed Rate Limiting, Key-Value Store, Consistent Hashing, Sharding Router, Elastic Rebalance — Completed
+* **Phase 16: URL Shortener Service** — Base62 Snowflake encoding, MongoDB persistence, HTTP 302 redirection, expiration, click analytics — Completed
+* **Phase 17: Web Crawler Service** — Controlled demo crawler, SSRF validator, URL normalization & deduplication, Jsoup HTML parser, async thread pool — Completed
+* **Phase 18: Autocomplete & Search Suggestions** — In-memory prefix Trie, multi-token indexing, Redis caching, stock-aware ranking, highlight formatting — Completed
+* **Phase 19: Competitor Price Monitoring** — Authorized source allowlists, HTML price parsing, historical observations, price comparisons, no automatic price changes — Completed
+* **Phase 20: Performance, Scalability & Failure Evaluation** — Empirical benchmark suite, measured throughput/latencies, failure recovery, formal evaluation report (`docs/performance-and-failure-evaluation.md`) — Completed
 
 ---
 
@@ -25,21 +24,21 @@ Phase 5 establishes stateless user authentication, Spring Security configuration
 3. [x] **Phase 3**: Database Design and Common Models
 4. [x] **Phase 4**: API Standards and Postman Setup
 5. [x] **Phase 5**: User Authentication & JWT Service
-6. [ ] **Phase 6**: Product Catalog & Inventory Service
-7. [ ] **Phase 7**: High-Performance Product Caching (Redis Cache-Aside)
-8. [ ] **Phase 8**: Shopping Cart Service & Distributed Session Store
-9. [ ] **Phase 9**: Order Processing Pipeline & Saga Pattern
-10. [ ] **Phase 10**: Distributed Unique ID Generator (Snowflake / UUIDv7)
-11. [ ] **Phase 11**: Distributed Rate Limiting (Token Bucket / Sliding Window via Redis)
-12. [ ] **Phase 12**: Search Service & Full-Text Search Engine
-13. [ ] **Phase 13**: Real-Time Search Autocomplete (Trie / Redis Sorted Sets)
-14. [ ] **Phase 14**: URL Shortener Service (Base62 Encoding & Bloom Filter)
-15. [ ] **Phase 15**: Distributed Caching Invalidation & Cache Stampede Protection
-16. [ ] **Phase 16**: Database Sharding & Partitioning Strategy
-17. [ ] **Phase 17**: Distributed Lock Manager (Redlock Algorithm)
-18. [ ] **Phase 18**: Asynchronous Messaging & Event-Driven Architecture (Kafka / RabbitMQ)
-19. [ ] **Phase 19**: API Gateway, Routing & SSL Termination
-20. [ ] **Phase 20**: Observability, Distributed Tracing & Centralized Logging
+6. [x] **Phase 6**: Product Catalog & Inventory Service
+7. [x] **Phase 7**: High-Performance Product Caching (Redis Cache-Aside)
+8. [x] **Phase 8**: Shopping Cart Service & Distributed Session Store
+9. [x] **Phase 9**: Order Processing Pipeline & Unique ID Integration
+10. [x] **Phase 10**: Distributed Unique ID Generator (Snowflake Algorithm)
+11. [x] **Phase 11**: Distributed Rate Limiting (Sliding Window via Redis Lua)
+12. [x] **Phase 12**: In-Memory Key-Value Storage Engine with Dual Expiration
+13. [x] **Phase 13**: Consistent Hash Ring with Virtual Nodes (Ketama MD5)
+14. [x] **Phase 14**: Logical Database Sharding & Shard Router
+15. [x] **Phase 15**: Elastic Shard Rebalance Simulation & Key Migration
+16. [x] **Phase 16**: Distributed URL Shortener Service (Base62 + Snowflake)
+17. [x] **Phase 17**: Controlled Web Crawler with SSRF Defense & Jsoup Extraction
+18. [x] **Phase 18**: High-Throughput Search Suggestions & Prefix Autocomplete Trie
+19. [x] **Phase 19**: Responsible Competitor Price Monitoring & History Comparison
+20. [x] **Phase 20**: Empirical Performance, Scalability & Failure Evaluation Report
 
 ---
 
@@ -321,6 +320,63 @@ Verifies that the Spring Boot application JVM process is running. This check is 
 Verifies live connectivity to MongoDB (via lightweight `db.adminCommand('ping')`) and Redis (via `ping() -> PONG`).
 * **All dependencies healthy**: Returns `HTTP 200 OK`.
 * **Any dependency unavailable**: Returns `HTTP 503 SERVICE_UNAVAILABLE` with individual statuses (`"DOWN"`), without crashing the application.
+
+---
+
+## Member 4 Implementations: Phases 16–20
+
+### 1. Phase 16: URL Shortener Service
+* **Key Architecture**: Combines the 64-bit distributed Snowflake ID generator with alphanumeric Base62 encoding (`[0-9a-zA-Z]`), generating short 6–8 character codes.
+* **Storage & Indexing**: Persistent MongoDB collection `short_urls` with unique index on `shortCode` and optional TTL index on `expiresAt`.
+* **Redirection**: HTTP 302 redirect via `GET /r/{shortCode}` or `GET /{shortCode}`. Atomically increments `clickCount` via `MongoTemplate`.
+* **Security & SSRF**: Validates HTTP/HTTPS schemes; never fetches or executes destination URLs; bounded retry policy for custom alias collisions.
+* **Endpoints**:
+  * `POST /api/v1/short-urls` — Create a shortened URL (supports custom aliases and TTL).
+  * `GET /r/{shortCode}` — HTTP 302 Found redirect to original destination.
+  * `GET /api/v1/short-urls/{shortCode}` — Inspect metadata, creation/expiration dates, and click counts.
+  * `GET /api/v1/short-urls/my` — List authenticated user's shortened links (Requires JWT).
+
+### 2. Phase 17: Demonstration Web Crawler Service
+* **Key Architecture**: Controlled asynchronous demo web crawler for product analysis and market intelligence.
+* **Security & SSRF Mitigation**: Proactive `SsrfValidator` resolves IP destinations using `InetAddress.getByName` and blocks loopback (`127.0.0.1`), link-local (`169.254.169.254`), and private RFC 1918 subnets. Re-validates destinations across redirect chains.
+* **Deduplication & Parsing**: Canonical URL normalization (query param retention, port stripping) via SHA-256 fingerprint deduplication. Robust HTML parsing via Jsoup.
+* **Configurable Limits**: Max depth (default 3), max pages (default 50), timeout (5,000 ms), max response size (2 MB), allowed domains filter.
+* **Endpoints**:
+  * `POST /api/v1/crawler/jobs` — Submit a crawl job with seeds and domain allowlists.
+  * `GET /api/v1/crawler/jobs/{jobId}` — Inspect real-time status, pages processed, and error counters.
+  * `GET /api/v1/crawler/jobs/{jobId}/results` — Retrieve extracted page titles, text summaries, status codes, and outbound links.
+  * `POST /api/v1/crawler/jobs/{jobId}/cancel` — Gracefully terminate a running crawl job.
+
+### 3. Phase 18: Autocomplete & Search Suggestions
+* **Key Architecture**: Concurrency-safe prefix Trie (`AutocompleteTrie`) indexing in-stock product names and multi-word title tokens.
+* **Performance Optimization**: Bounded candidate collection ($3 \times \text{limit}$) prevents memory bloat and delivers sub-millisecond suggestions (**31,916 ops/sec, p50: 29.4 μs**).
+* **Caching**: Redis cache-aside key `autocomplete:prefix:{q}:{limit}` with 15-minute TTL. Automatically invalidated on product create, update, or delete.
+* **Ranking & Formatting**: Prioritizes exact prefix matches, followed by word token matches, followed by alphabetical order. Generates `<b>` highlighted query prefixes.
+* **Endpoint**:
+  * `GET /api/v1/products/suggestions?q={prefix}&limit={limit}` — Retrieve real-time product search suggestions.
+
+### 4. Phase 19: Competitor Price Monitoring
+* **Key Architecture**: Responsible, lawful market price monitoring using strictly approved domain sources.
+* **Safeguards**: Never scrapes arbitrary user URLs; enforces source domain allowlists; zero automatic modification of catalog product prices.
+* **Price Parsing & Extraction**: Multi-currency extraction (`$`, `€`, `£`, `¥`, `INR`) with decimal normalization and strict rejection of negative/ambiguous values.
+* **History & Comparison**: Maintains immutable historical observation documents. Computes price differences and percentage variances against local product prices.
+* **Endpoints**:
+  * `POST /api/v1/competitors/sources` — Register approved competitor domains and extraction strategies.
+  * `GET /api/v1/competitors/sources` — List approved sources.
+  * `POST /api/v1/competitors/mappings` — Map a local product to a competitor product URL.
+  * `POST /api/v1/competitors/mappings/{id}/refresh` — Trigger authorized price observation refresh.
+  * `GET /api/v1/competitors/products/{id}/comparison` — Compare local price against latest competitor observations.
+  * `GET /api/v1/competitors/mappings/{id}/history` — Retrieve historical price tracking observations.
+
+### 5. Phase 20: Performance, Scalability & Failure Evaluation
+* **Evaluation Suite**: `com.ecommerce.benchmark.SystemPerformanceAndFailureBenchmarkTest` executing reproducible empirical benchmarks.
+* **Measured Throughput**:
+  * Snowflake ID Generator: **3,537,794 ops/sec** (p50: 100 ns)
+  * Consistent Hash Ring: **495,989 ops/sec** (p50: 700 ns)
+  * In-Memory KV Store: **428,088 ops/sec** (p50: 400 ns)
+  * Autocomplete Trie: **31,916 ops/sec** (p50: 29.4 μs)
+* **Failure Scenarios**: Verified Redis rate limiter `FAIL_OPEN` graceful degradation, Snowflake 2ms backward clock drift sleep synchronization, and SSRF attack defenses.
+* **Full Evaluation Report**: Detailed empirical findings in [`docs/performance-and-failure-evaluation.md`](file:///c:/ECommerce-System/docs/performance-and-failure-evaluation.md).
 
 ---
 

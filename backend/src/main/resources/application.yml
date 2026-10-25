@@ -40,4 +40,26 @@ app:
     product-ttl-minutes: ${PRODUCT_CACHE_TTL_MINUTES:10}
     # TTL for catalog searches and listings (default: 5 minutes)
     search-ttl-minutes: ${SEARCH_CACHE_TTL_MINUTES:5}
+  rate-limiting:
+    enabled: ${RATE_LIMITING_ENABLED:true}
+    trust-proxy: ${RATE_LIMITING_TRUST_PROXY:false}
+    fallback-policy: ${RATE_LIMITING_FALLBACK_POLICY:FAIL_OPEN}
+    rules:
+      auth:
+        limit: ${RATE_LIMIT_AUTH_LIMIT:10}
+        window-seconds: ${RATE_LIMIT_AUTH_WINDOW:60}
+      orders:
+        limit: ${RATE_LIMIT_ORDERS_LIMIT:15}
+        window-seconds: ${RATE_LIMIT_ORDERS_WINDOW:60}
+      api-default:
+        limit: ${RATE_LIMIT_DEFAULT_LIMIT:60}
+        window-seconds: ${RATE_LIMIT_DEFAULT_WINDOW:60}
+  id-generator:
+    enabled: ${ID_GENERATOR_ENABLED:true}
+    datacenter-id: ${ID_GENERATOR_DATACENTER_ID:1}
+    worker-id: ${ID_GENERATOR_WORKER_ID:1}
+    custom-epoch-ms: ${ID_GENERATOR_EPOCH_MS:1767225600000}
+    max-backward-ms: ${ID_GENERATOR_MAX_BACKWARD_MS:10}
+
+
 

@@ -366,6 +366,36 @@
       "description": "Endpoints for product catalog listing, retrieval, creation, updating, and deletion (Phase 6).",
       "item": [
         {
+          "name": "Autocomplete Search Suggestions",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/suggestions?q=wire&limit=5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "suggestions"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "wire"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Returns fast, prefix-ranked product search suggestions from in-memory Trie and Redis cache."
+          },
+          "response": []
+        },
+        {
           "name": "List Products (Paginated)",
           "event": [
             {
@@ -1683,6 +1713,662 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Rate Limiting",
+      "description": "Verification of distributed Redis sliding-window rate limiting and quota enforcement.",
+      "item": [
+        {
+          "name": "Inspect Rate Limiting Telemetry Headers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"X-RateLimit headers are present\", function () {",
+                  "    pm.expect(pm.response.headers.has(\"X-RateLimit-Limit\")).to.be.true;",
+                  "    pm.expect(pm.response.headers.has(\"X-RateLimit-Remaining\")).to.be.true;",
+                  "    pm.expect(pm.response.headers.has(\"X-RateLimit-Reset\")).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test(\"Quota remaining is a valid non-negative number\", function () {",
+                  "    const remaining = parseInt(pm.response.headers.get(\"X-RateLimit-Remaining\"));",
+                  "    pm.expect(remaining).to.be.at.least(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products"
+              ]
+            },
+            "description": "Verifies that public requests receive rate limit telemetry headers (X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Custom Key-Value Store",
+      "description": "High-performance concurrency-safe in-memory key-value storage with TTL support.",
+      "item": [
+        {
+          "name": "Put Key-Value",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"value\": \"sample-cached-payload\",\n  \"ttlSeconds\": 300\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/kv/session:user123",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "kv",
+                "session:user123"
+              ]
+            },
+            "description": "Stores a key-value pair with an optional TTL in seconds."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Key-Value",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/kv/session:user123",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "kv",
+                "session:user123"
+              ]
+            },
+            "description": "Retrieves the value and metadata for an existing key."
+          },
+          "response": []
+        },
+        {
+          "name": "List All Key-Values",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/kv",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "kv"
+              ]
+            },
+            "description": "Lists all active, unexpired keys in the in-memory store."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Key-Value",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/kv/session:user123",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "kv",
+                "session:user123"
+              ]
+            },
+            "description": "Deletes a key from the key-value store."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Data Sharding",
+      "description": "Consistent-hashing based logical shard routing and rebalance simulation.",
+      "item": [
+        {
+          "name": "List Registered Shards",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/shards",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "shards"
+              ]
+            },
+            "description": "Returns the active logical shard topology and node counts."
+          },
+          "response": []
+        },
+        {
+          "name": "Route Key to Shard",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/shards/route/order:ord-987654",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "shards",
+                "route",
+                "order:ord-987654"
+              ]
+            },
+            "description": "Deterministically resolves the target logical shard for a partition key."
+          },
+          "response": []
+        },
+        {
+          "name": "Simulate Shard Rebalance",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/shards/rebalance/simulate?newShardId=shard-3&sampleKeyCount=500",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "shards",
+                "rebalance",
+                "simulate"
+              ],
+              "query": [
+                {
+                  "key": "newShardId",
+                  "value": "shard-3"
+                },
+                {
+                  "key": "sampleKeyCount",
+                  "value": "500"
+                }
+              ]
+            },
+            "description": "Simulates topology expansion and measures minimal key remapping."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Unique ID Generator",
+      "description": "Distributed 64-bit Snowflake ID generation, batch allocation, and decomposition.",
+      "item": [
+        {
+          "name": "Generate Single ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ids/next",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ids",
+                "next"
+              ]
+            },
+            "description": "Generates a unique 64-bit distributed Snowflake identifier."
+          },
+          "response": []
+        },
+        {
+          "name": "Generate Batch IDs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ids/batch?count=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ids",
+                "batch"
+              ],
+              "query": [
+                {
+                  "key": "count",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Generates a sequential batch of unique distributed IDs."
+          },
+          "response": []
+        },
+        {
+          "name": "Decode ID Components",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ids/decode/12345678901234567",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ids",
+                "decode",
+                "12345678901234567"
+              ]
+            },
+            "description": "Decomposes a 64-bit Snowflake ID into timestamp, datacenter, worker, and sequence."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "URL Shortener",
+      "description": "High-throughput Base62 Snowflake URL shortening service with HTTP 302 redirection and analytics.",
+      "item": [
+        {
+          "name": "Create Short URL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"originalUrl\": \"https://ecommerce.example.com/products/deals/summer-sale-2026\",\n  \"customAlias\": \"summer-sale\",\n  \"expiresInDays\": 30\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/short-urls",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "short-urls"
+              ]
+            },
+            "description": "Shortens a destination URL into a 6-8 character Base62 link with optional expiration."
+          },
+          "response": []
+        },
+        {
+          "name": "Redirect to Original URL",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/r/summer-sale",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "r",
+                "summer-sale"
+              ]
+            },
+            "description": "Resolves the short code and returns HTTP 302 redirect to original destination while recording click telemetry."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Short URL Analytics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/short-urls/summer-sale",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "short-urls",
+                "summer-sale"
+              ]
+            },
+            "description": "Inspects click count, expiration, creation timestamp, and original URL."
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Short URLs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/short-urls/my",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "short-urls",
+                "my"
+              ]
+            },
+            "description": "Retrieves the list of shortened URLs created by the authenticated customer or seller."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Web Crawler",
+      "description": "Safe, controlled asynchronous web crawler with SSRF protection, URL deduplication, and link traversal.",
+      "item": [
+        {
+          "name": "Submit Crawl Job",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"seedUrls\": [\n    \"https://example.com\"\n  ],\n  \"allowedDomains\": [\n    \"example.com\"\n  ],\n  \"maxPages\": 20,\n  \"maxDepth\": 2,\n  \"requestDelayMs\": 100\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/crawler/jobs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "crawler",
+                "jobs"
+              ]
+            },
+            "description": "Submits a new crawl job for asynchronous execution."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Crawl Job Status",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/crawler/jobs/crawl-12345678",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "crawler",
+                "jobs",
+                "crawl-12345678"
+              ]
+            },
+            "description": "Polls current crawler job status (SUBMITTED, RUNNING, COMPLETED, FAILED, CANCELLED)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Crawl Job Results",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/crawler/jobs/crawl-12345678/results",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "crawler",
+                "jobs",
+                "crawl-12345678",
+                "results"
+              ]
+            },
+            "description": "Retrieves the parsed metadata, summaries, canonical URLs, and extracted outgoing links for crawled pages."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Crawl Job",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/crawler/jobs/crawl-12345678/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "crawler",
+                "jobs",
+                "crawl-12345678",
+                "cancel"
+              ]
+            },
+            "description": "Signals the active crawler to stop further page fetching."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Competitor Price Monitoring",
+      "description": "Controlled, lawful competitor price tracking, historical observations, and product catalog comparison.",
+      "item": [
+        {
+          "name": "Register Competitor Source",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"PartnerRetailer\",\n  \"allowedDomain\": \"partner.example.com\",\n  \"priceCssSelector\": \".product-price, .current-price\",\n  \"currency\": \"USD\",\n  \"pollingIntervalMinutes\": 60\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/competitors/sources",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "competitors",
+                "sources"
+              ]
+            },
+            "description": "Registers an authorized competitor/partner data source with allowed domain and CSS extraction rules."
+          },
+          "response": []
+        },
+        {
+          "name": "List Competitor Sources",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/competitors/sources",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "competitors",
+                "sources"
+              ]
+            },
+            "description": "Lists all configured competitor price sources."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Product Mapping",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"sourceId\": \"src-100\",\n  \"competitorUrl\": \"https://partner.example.com/item/42\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/competitors/mappings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "competitors",
+                "mappings"
+              ]
+            },
+            "description": "Maps a local catalog product to an authorized competitor destination URL."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Product Price Comparison",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/competitors/products/{{productId}}/comparison",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "competitors",
+                "products",
+                "{{productId}}",
+                "comparison"
+              ]
+            },
+            "description": "Compares the local product price against recent competitor observations, calculating absolute and percentage differences."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Mapping Price",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/competitors/mappings/map-100/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "competitors",
+                "mappings",
+                "map-100",
+                "refresh"
+              ]
+            },
+            "description": "Triggers a manual extraction and observation for a mapped product."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Price History",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/competitors/mappings/map-100/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "competitors",
+                "mappings",
+                "map-100",
+                "history"
+              ]
+            },
+            "description": "Retrieves the historical timeline of price observations for a product mapping."
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }
+
+
+
+

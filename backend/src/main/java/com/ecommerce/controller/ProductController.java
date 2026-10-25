@@ -22,6 +22,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.ecommerce.autocomplete.AutocompleteService;
+import com.ecommerce.autocomplete.ProductSuggestionResponse;
+
+import java.util.List;
+
 /**
  * REST controller exposing endpoints for product catalog management,
  * retrieval, pagination, updates, and deletion.
@@ -31,9 +36,26 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProductController {
 
     private final ProductService productService;
+    private final AutocompleteService autocompleteService;
 
-    public ProductController(ProductService productService) {
+    public ProductController(ProductService productService, AutocompleteService autocompleteService) {
         this.productService = productService;
+        this.autocompleteService = autocompleteService;
+    }
+
+    /**
+     * Autocomplete and search suggestions based on prefix query.
+     * Publicly accessible.
+     */
+    @GetMapping("/suggestions")
+    public ResponseEntity<ApiResponse<List<ProductSuggestionResponse>>> getSuggestions(
+            @RequestParam(required = false, defaultValue = "") String q,
+            @RequestParam(defaultValue = "10") int limit
+    ) {
+        List<ProductSuggestionResponse> suggestions = autocompleteService != null
+                ? autocompleteService.getSuggestions(q, limit)
+                : List.of();
+        return ResponseEntity.ok(ApiResponse.success("Search suggestions retrieved successfully", suggestions));
     }
 
     /**

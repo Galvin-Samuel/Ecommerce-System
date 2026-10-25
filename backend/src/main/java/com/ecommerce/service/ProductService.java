@@ -49,6 +49,9 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final MongoTemplate mongoTemplate;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.ecommerce.autocomplete.AutocompleteService autocompleteService;
+
     public ProductService(ProductRepository productRepository, MongoTemplate mongoTemplate) {
         this.productRepository = productRepository;
         this.mongoTemplate = mongoTemplate;
@@ -81,6 +84,9 @@ public class ProductService {
 
         Product savedProduct = productRepository.save(product);
         log.info("Product created with ID '{}' by seller '{}'", savedProduct.getId(), principal.id());
+        if (autocompleteService != null) {
+            autocompleteService.indexProduct(savedProduct);
+        }
         return ProductResponse.fromEntity(savedProduct);
     }
 
@@ -240,6 +246,9 @@ public class ProductService {
 
         Product updatedProduct = productRepository.save(product);
         log.info("Product '{}' updated successfully by principal '{}'", id, principal.id());
+        if (autocompleteService != null) {
+            autocompleteService.indexProduct(updatedProduct);
+        }
         return ProductResponse.fromEntity(updatedProduct);
     }
 
@@ -262,6 +271,9 @@ public class ProductService {
 
         productRepository.delete(product);
         log.info("Product '{}' deleted by principal '{}'", id, principal.id());
+        if (autocompleteService != null) {
+            autocompleteService.removeProduct(id);
+        }
     }
 
     private void validateOwnership(Product product, UserPrincipal principal, String action) {
